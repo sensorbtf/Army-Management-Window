@@ -63,23 +63,20 @@ public class ArmiesManager : MonoBehaviour
     }
     private void InteractableButtonSwap()
     {
-        if (SelectedSlots.Count() < 2 || SelectedSlots.FirstOrDefault(s => s.unit) == null)
+        if (SelectedSlots.Count() < 2)
             swapButton.interactable = false;
+        else if (SelectedSlots.FirstOrDefault(s => s.unit) == null)
+            swapButton.interactable = false;
+        else if (SelectedSlots.FirstOrDefault(s => s.unit) != null &&
+                SelectedSlots.Where(s => s.unit).Skip(1).FirstOrDefault() != null)
+        {
+            if (firstSelection.unit.name == secondSelection.unit.name)
+                swapButton.interactable = false;
+            else
+                swapButton.interactable = true;
+        }
         else
             swapButton.interactable = true;
-
-        
-        //if (firstSelection.unit.name == secondSelection.unit.name)
-        //{
-        //    swapButton.interactable = false;
-        //    return;
-        //}
-        //if (firstSelection.unit == null || secondSelection.unit == null)
-        //{
-        //    swapButton.interactable = false;
-        //}
-        //if (firstSelection.unit.name == secondSelection.unit.name)
-        //    swapButton.interactable = false;
 
     }
     public void Add1ButtonHandler()
@@ -90,6 +87,7 @@ public class ArmiesManager : MonoBehaviour
 
             s.unit = Instantiate(unit1x, s.transform);
         }
+        InteractableButtonSwap();
     }
 
     public void Add2ButtonHandler()
@@ -107,6 +105,7 @@ public class ArmiesManager : MonoBehaviour
             neighbor.tailOf2xUnit = true;
             doubleUnit.tailSlot = neighbor;
         }
+        InteractableButtonSwap();
     }
 
     private Slot GetRightNeighbor(Slot s)
@@ -138,23 +137,17 @@ public class ArmiesManager : MonoBehaviour
     }
     public void SwapButtonHandler()
     {
-        // There's no enough selected slots to make a swap:
-        if (SelectedSlots.Count() < 2)
-        {
-            return;
-        } 
-
-        // Not swapping the same units as we have only 2 types
-        if (firstSelection.unit.name == secondSelection.unit.name)
-        {
-            swapButton.interactable = false;
-            return;
-        }
-
         // Swapping if one of the slots is empty
         if (firstSelection.unit == null || secondSelection.unit == null)
         {
-            return; 
+            if (SelectedSlots.FirstOrDefault(s => s.unit) != null ||
+                SelectedSlots.Where(s => s.unit).Skip(1).FirstOrDefault() != null)
+            {
+                if (secondSelection.unit.name.Contains("1x") || firstSelection.unit.name.Contains("1x"))
+                    SwapX1WithEmpty();
+                else
+                    SwapX2WithEmpty();
+            }
         }
         else
         {
@@ -162,6 +155,67 @@ public class ArmiesManager : MonoBehaviour
         }       
     }
     private void SimpleSwap()
+    {
+        // Simple swap by name that demands having something like "2xSlot/1xSlot" in name of Units
+        var doubleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("2x"));
+        var singleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("1x"));
+        // safety 
+        if (doubleUnitSlot == null || singleUnitSlot == null) return;
+
+        var neighbor = GetRightNeighbor(singleUnitSlot);
+        // clean swap condition: 
+        if (neighbor != null && neighbor.unit == null)
+        {
+            var doubleUnit = doubleUnitSlot.unit.GetComponent<DoubleUnit>();
+            // clear tail unit slot:
+            doubleUnit.tailSlot.unit = null;
+            // move single unit to double unit slot:
+            doubleUnitSlot.unit = singleUnitSlot.unit;
+            // reset position and parent of single unit:
+            doubleUnitSlot.unit.transform.SetParent(doubleUnitSlot.transform);
+            doubleUnitSlot.unit.transform.localPosition = Vector3.zero;
+
+            // move the double unit to single unit slot:
+            singleUnitSlot.unit = doubleUnit.gameObject;
+            neighbor.unit = doubleUnit.gameObject;
+            doubleUnit.tailSlot.tailOf2xUnit = false;
+            doubleUnit.tailSlot = neighbor;
+            singleUnitSlot.unit.transform.SetParent(singleUnitSlot.transform);
+            singleUnitSlot.unit.transform.localPosition = Vector3.zero;
+            neighbor.tailOf2xUnit = true;
+        }
+    }
+    private void SwapX1WithEmpty()
+    {
+        var singleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit != null);
+        var freeSlot = SelectedSlots.FirstOrDefault(s => s.unit == null);
+        // safety 
+        //if (freeSlot !="null || singleUnitSlot == null) return;
+        Debug.Log("Trying");
+        var neighbor = GetRightNeighbor(freeSlot);
+        // clean swap condition: 
+        if (neighbor != null && neighbor.unit == null)
+        {
+            //var doubleUnit = doubleUnitSlot.unit.GetComponent<DoubleUnit>();
+            // clear tail unit slot:
+            // doubleUnit.tailSlot.unit = null;
+            // move single unit to double unit slot:
+            freeSlot.unit = singleUnitSlot.unit;
+            // reset position and parent of single unit:
+            freeSlot.unit.transform.SetParent(singleUnitSlot.transform);
+            freeSlot.unit.transform.localPosition = Vector3.zero;
+
+            //// move the double unit to single unit slot:
+            //singleUnitSlot.unit = doubleUnit.gameObject;
+            //neighbor.unit = doubleUnit.gameObject;
+            //doubleUnit.tailSlot.tailOf2xUnit = false;
+            //doubleUnit.tailSlot = neighbor;
+            //singleUnitSlot.unit.transform.SetParent(singleUnitSlot.transform);
+            //singleUnitSlot.unit.transform.localPosition = Vector3.zero;
+            //neighbor.tailOf2xUnit = true;
+        }
+    }
+    private void SwapX2WithEmpty()
     {
         // Simple swap by name that demands having something like "2xSlot/1xSlot" in name of Units
         var doubleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("2x"));
