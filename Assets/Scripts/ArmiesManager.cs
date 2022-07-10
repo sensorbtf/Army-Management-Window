@@ -63,13 +63,17 @@ public class ArmiesManager : MonoBehaviour
     }
     private void InteractableButtonSwap()
     {
+        // if there is less than two selected
         if (SelectedSlots.Count() < 2)
             swapButton.interactable = false;
+        // if there are 2 selected but they are empty
         else if (SelectedSlots.FirstOrDefault(s => s.unit) == null)
             swapButton.interactable = false;
+        // checking if there 2 to selected units
         else if (SelectedSlots.FirstOrDefault(s => s.unit) != null &&
                 SelectedSlots.Where(s => s.unit).Skip(1).FirstOrDefault() != null)
         {
+            // checking if that are the same units
             if (firstSelection.unit.name == secondSelection.unit.name)
                 swapButton.interactable = false;
             else
@@ -127,7 +131,7 @@ public class ArmiesManager : MonoBehaviour
         foreach (var s in SelectedSlots)
             if (s.unit != null)
             {
-                // checking if unit is 2-slot and while it is, deleting (setting false) to right slot
+                // checking if unit is 2-slot and while it is, that sets false to right slot
                 var doubleUnit = s.unit.GetComponent<DoubleUnit>();
                 if (doubleUnit != null && doubleUnit.tailSlot != null)
                     doubleUnit.tailSlot.tailOf2xUnit = false;
@@ -140,14 +144,7 @@ public class ArmiesManager : MonoBehaviour
         // Swapping if one of the slots is empty
         if (firstSelection.unit == null || secondSelection.unit == null)
         {
-            if (SelectedSlots.FirstOrDefault(s => s.unit) != null ||
-                SelectedSlots.Where(s => s.unit).Skip(1).FirstOrDefault() != null)
-            {
-                if (secondSelection.unit.name.Contains("1x") || firstSelection.unit.name.Contains("1x"))
                     SwapX1WithEmpty();
-                else
-                    SwapX2WithEmpty();
-            }
         }
         else
         {
@@ -191,11 +188,11 @@ public class ArmiesManager : MonoBehaviour
         var freeSlot = SelectedSlots.FirstOrDefault(s => s.unit == null);
         // safety 
         //if (freeSlot !="null || singleUnitSlot == null) return;
-        Debug.Log("Trying");
         var neighbor = GetRightNeighbor(freeSlot);
         // clean swap condition: 
         if (neighbor != null && neighbor.unit == null)
         {
+            Debug.Log("Trying");
             //var doubleUnit = doubleUnitSlot.unit.GetComponent<DoubleUnit>();
             // clear tail unit slot:
             // doubleUnit.tailSlot.unit = null;
