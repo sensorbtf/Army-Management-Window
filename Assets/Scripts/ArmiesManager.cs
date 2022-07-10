@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class ArmiesManager : MonoBehaviour
 {
@@ -11,51 +12,81 @@ public class ArmiesManager : MonoBehaviour
     
     public static ArmiesManager Instance;
 
-    private Slot lastSelection;
-    private Slot previousSelection;
+    private Slot firstSelection;
+    private Slot secondSelection;
 
-    private IEnumerable<Slot> SelectedSlots => new[] {lastSelection, previousSelection}.Where(s => s != null);
+    private IEnumerable<Slot> SelectedSlots => new[] {firstSelection, secondSelection}.Where(s => s != null);
+
+    [SerializeField]
+    public Button swapButton;
 
     private void Awake()
     {
         Instance = this;
-    }
 
+        if (SelectedSlots.Count() == 0)
+            swapButton.interactable = false;
+    }
     public void SelectSlot(Slot slot)
     {
+        /*breaking selection of right slot of 2-slot unit altought
+        in my visualisation it would be better to leave both slots of 2-slot unit active
+        as I don't see a reason of putting 2-slots units in one slot*/
         if (slot.tailOf2xUnit) return;
-        
-        // handle selection:
-        if (slot == previousSelection)
+
+        // selection of slots logic
+        if (slot == secondSelection)
         {
-            previousSelection = null;
+            secondSelection = null;
         }
-        else if (slot == lastSelection)
+        else if (slot == firstSelection)
         {
-            lastSelection = previousSelection;
-            previousSelection = null;
+            firstSelection = secondSelection;
+            secondSelection = null;
         }
         else
         {
-            previousSelection = lastSelection;
-            lastSelection = slot;
+            secondSelection = firstSelection;
+            firstSelection = slot;
         }
-        
+        // Going through list and making selections
         foreach (var army in armies)
         {
             foreach (var s in army.slots)
             {
-                var shouldBeSelected = s == lastSelection || s == previousSelection;
+                var shouldBeSelected = s == firstSelection || s == secondSelection;
                 s.SetSelected(shouldBeSelected);
+                // Swap button state (not in update/fixed update to save resources)
+                InteractableButtonSwap();
             }
         }
     }
+    private void InteractableButtonSwap()
+    {
+        if (SelectedSlots.Count() < 2 || SelectedSlots.FirstOrDefault(s => s.unit) == null)
+            swapButton.interactable = false;
+        else
+            swapButton.interactable = true;
 
+        
+        //if (firstSelection.unit.name == secondSelection.unit.name)
+        //{
+        //    swapButton.interactable = false;
+        //    return;
+        //}
+        //if (firstSelection.unit == null || secondSelection.unit == null)
+        //{
+        //    swapButton.interactable = false;
+        //}
+        //if (firstSelection.unit.name == secondSelection.unit.name)
+        //    swapButton.interactable = false;
+
+    }
     public void Add1ButtonHandler()
     {
         foreach (var s in SelectedSlots)
         {
-            if (s.unit != null) continue;
+            if (s.unit != null) continue; 
 
             s.unit = Instantiate(unit1x, s.transform);
         }
@@ -80,12 +111,12 @@ public class ArmiesManager : MonoBehaviour
 
     private Slot GetRightNeighbor(Slot s)
     {
-        // find army that this slot belongs to:
+        // Finding army that this slot belongs to:
         var slotArmy = armies.FirstOrDefault(a => a.slots.Contains(s));
-        if (slotArmy == null) return null;
+        if (slotArmy == null) return null; //?
 
         var index = slotArmy.slots.IndexOf(s);
-        // not contained or right most, continue (cannot place 2x unit)
+        // not contained or  most on the right, so it cannot place 2xunit
         if (index < 0 || index == slotArmy.slots.Count - 1) return null;
             
         // find neighbor slot in the army: 
@@ -97,39 +128,51 @@ public class ArmiesManager : MonoBehaviour
         foreach (var s in SelectedSlots)
             if (s.unit != null)
             {
+                // checking if unit is 2-slot and while it is, deleting (setting false) to right slot
                 var doubleUnit = s.unit.GetComponent<DoubleUnit>();
                 if (doubleUnit != null && doubleUnit.tailSlot != null)
                     doubleUnit.tailSlot.tailOf2xUnit = false;
-
+                // deleting unit from slot 
                 Destroy(s.unit);
             }
     }
-
     public void SwapButtonHandler()
     {
-        // nothing to swap:
-        if (SelectedSlots.Count() < 2) return;
+        // There's no enough selected slots to make a swap:
+        if (SelectedSlots.Count() < 2)
+        {
+            return;
+        } 
 
-        // TODO: swapping if one of the slots is empty? 
-        // for now, only swapping full slots: 
-        if (lastSelection.unit == null || previousSelection.unit == null) return;
-        
-        // not swapping the same units:
-        // there's a case where you can end up with leftover highlight on a 2x unit tail, but let's ignore that for now.
-        if (lastSelection.unit.name == previousSelection.unit.name) return;
+        // Not swapping the same units as we have only 2 types
+        if (firstSelection.unit.name == secondSelection.unit.name)
+        {
+            swapButton.interactable = false;
+            return;
+        }
 
-        // clean swap conditions: 
-        // checking by name is hacky, but let's have it for now:
+        // Swapping if one of the slots is empty
+        if (firstSelection.unit == null || secondSelection.unit == null)
+        {
+            return; 
+        }
+        else
+        {
+            SimpleSwap();
+        }       
+    }
+    private void SimpleSwap()
+    {
+        // Simple swap by name that demands having something like "2xSlot/1xSlot" in name of Units
         var doubleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("2x"));
         var singleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("1x"));
-        // safety check
+        // safety 
         if (doubleUnitSlot == null || singleUnitSlot == null) return;
 
         var neighbor = GetRightNeighbor(singleUnitSlot);
         // clean swap condition: 
         if (neighbor != null && neighbor.unit == null)
         {
-            // perform the swap: 
             var doubleUnit = doubleUnitSlot.unit.GetComponent<DoubleUnit>();
             // clear tail unit slot:
             doubleUnit.tailSlot.unit = null;
