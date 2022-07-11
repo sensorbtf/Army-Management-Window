@@ -10,6 +10,10 @@ public class Slot : MonoBehaviour
     {
         selectionMarker.SetActive(shouldBeSelected);
     }
+    public void unSelect()
+    {
+        selectionMarker.SetActive(false);
+    }
     public void ButtonHandler()
     {
         ArmiesManager.Instance.SelectSlot(this);

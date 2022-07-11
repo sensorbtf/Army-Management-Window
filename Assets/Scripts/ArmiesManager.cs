@@ -7,15 +7,15 @@ public class ArmiesManager : MonoBehaviour
 {
     public GameObject unit1x;
     public GameObject unit2x;
-    
+
     public List<Army> armies;
-    
+
     public static ArmiesManager Instance;
 
     private Slot firstSelection;
     private Slot secondSelection;
 
-    private IEnumerable<Slot> SelectedSlots => new[] {firstSelection, secondSelection}.Where(s => s != null);
+    private IEnumerable<Slot> SelectedSlots => new[] { firstSelection, secondSelection }.Where(s => s != null);
 
     [SerializeField]
     public Button swapButton;
@@ -26,6 +26,9 @@ public class ArmiesManager : MonoBehaviour
 
         if (SelectedSlots.Count() == 0)
             swapButton.interactable = false;
+
+        //secondSelection = secondSelection;
+        //firstSelection = firstSelection;
     }
     public void SelectSlot(Slot slot)
     {
@@ -87,7 +90,7 @@ public class ArmiesManager : MonoBehaviour
     {
         foreach (var s in SelectedSlots)
         {
-            if (s.unit != null) continue; 
+            if (s.unit != null) continue;
 
             s.unit = Instantiate(unit1x, s.transform);
         }
@@ -116,12 +119,12 @@ public class ArmiesManager : MonoBehaviour
     {
         // Finding army that this slot belongs to:
         var slotArmy = armies.FirstOrDefault(a => a.slots.Contains(s));
-        if (slotArmy == null) return null; //?
+        if (slotArmy == null) return null; 
 
         var index = slotArmy.slots.IndexOf(s);
-        // not contained or  most on the right, so it cannot place 2xunit
+        // not contained or most on the right
         if (index < 0 || index == slotArmy.slots.Count - 1) return null;
-            
+
         // find neighbor slot in the army: 
         return slotArmy.slots[index + 1];
     }
@@ -144,12 +147,29 @@ public class ArmiesManager : MonoBehaviour
         // Swapping if one of the slots is empty
         if (firstSelection.unit == null || secondSelection.unit == null)
         {
+            if (firstSelection.unit != null)
+            {
+                if (firstSelection.unit.name.Contains("1x"))
                     SwapX1WithEmpty();
+                else if (firstSelection.unit.name.Contains("2x") && GetRightNeighbor(secondSelection) == firstSelection)
+                    OneLeftUnitx2Swap();
+                else
+                    SwapX2WithEmpty();
+            }
+            else if (secondSelection.unit != null)
+                {
+                if (secondSelection.unit.name.Contains("1x"))
+                    SwapX1WithEmpty();
+                else if (secondSelection.unit.name.Contains("2x") && GetRightNeighbor(firstSelection) == secondSelection)
+                    OneLeftUnitx2Swap();
+                else
+                    SwapX2WithEmpty();
+                }
         }
         else
         {
             SimpleSwap();
-        }       
+        }
     }
     private void SimpleSwap()
     {
@@ -166,13 +186,12 @@ public class ArmiesManager : MonoBehaviour
             var doubleUnit = doubleUnitSlot.unit.GetComponent<DoubleUnit>();
             // clear tail unit slot:
             doubleUnit.tailSlot.unit = null;
-            // move single unit to double unit slot:
+            // move double unit to single unit slot:
             doubleUnitSlot.unit = singleUnitSlot.unit;
-            // reset position and parent of single unit:
+            // reset position and parent of double unit:
             doubleUnitSlot.unit.transform.SetParent(doubleUnitSlot.transform);
             doubleUnitSlot.unit.transform.localPosition = Vector3.zero;
 
-            // move the double unit to single unit slot:
             singleUnitSlot.unit = doubleUnit.gameObject;
             neighbor.unit = doubleUnit.gameObject;
             doubleUnit.tailSlot.tailOf2xUnit = false;
@@ -187,60 +206,71 @@ public class ArmiesManager : MonoBehaviour
         var singleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit != null);
         var freeSlot = SelectedSlots.FirstOrDefault(s => s.unit == null);
         // safety 
-        //if (freeSlot !="null || singleUnitSlot == null) return;
+        if (freeSlot == null || singleUnitSlot == null) return;
+
+        freeSlot.unit = singleUnitSlot.unit;
+        freeSlot.unit.transform.SetParent(freeSlot.transform);
+        freeSlot.unit.transform.localPosition = Vector3.zero;
+
+        singleUnitSlot.unit = null;
+    }
+    private void SwapX2WithEmpty()
+    {
+        var doubleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit != null);
+        var freeSlot = SelectedSlots.FirstOrDefault(s => s.unit == null);
+        // safety 
+        if (freeSlot == null || doubleUnitSlot == null) return;
+
         var neighbor = GetRightNeighbor(freeSlot);
         // clean swap condition: 
         if (neighbor != null && neighbor.unit == null)
         {
-            Debug.Log("Trying");
-            //var doubleUnit = doubleUnitSlot.unit.GetComponent<DoubleUnit>();
-            // clear tail unit slot:
-            // doubleUnit.tailSlot.unit = null;
-            // move single unit to double unit slot:
-            freeSlot.unit = singleUnitSlot.unit;
-            // reset position and parent of single unit:
-            freeSlot.unit.transform.SetParent(singleUnitSlot.transform);
+            var doubleUnit = doubleUnitSlot.unit.GetComponent<DoubleUnit>();
+            doubleUnit.tailSlot.unit = null;
+            // move double unit to single unit slot:
+            freeSlot.unit = doubleUnitSlot.unit;
+            // reset position and parent of double unit:
+            freeSlot.unit.transform.SetParent(freeSlot.transform);
             freeSlot.unit.transform.localPosition = Vector3.zero;
 
-            //// move the double unit to single unit slot:
-            //singleUnitSlot.unit = doubleUnit.gameObject;
-            //neighbor.unit = doubleUnit.gameObject;
-            //doubleUnit.tailSlot.tailOf2xUnit = false;
-            //doubleUnit.tailSlot = neighbor;
-            //singleUnitSlot.unit.transform.SetParent(singleUnitSlot.transform);
-            //singleUnitSlot.unit.transform.localPosition = Vector3.zero;
-            //neighbor.tailOf2xUnit = true;
-        }
-    }
-    private void SwapX2WithEmpty()
-    {
-        // Simple swap by name that demands having something like "2xSlot/1xSlot" in name of Units
-        var doubleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("2x"));
-        var singleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("1x"));
-        // safety 
-        if (doubleUnitSlot == null || singleUnitSlot == null) return;
-
-        var neighbor = GetRightNeighbor(singleUnitSlot);
-        // clean swap condition: 
-        if (neighbor != null && neighbor.unit == null)
-        {
-            var doubleUnit = doubleUnitSlot.unit.GetComponent<DoubleUnit>();
-            // clear tail unit slot:
-            doubleUnit.tailSlot.unit = null;
-            // move single unit to double unit slot:
-            doubleUnitSlot.unit = singleUnitSlot.unit;
-            // reset position and parent of single unit:
-            doubleUnitSlot.unit.transform.SetParent(doubleUnitSlot.transform);
-            doubleUnitSlot.unit.transform.localPosition = Vector3.zero;
-
-            // move the double unit to single unit slot:
-            singleUnitSlot.unit = doubleUnit.gameObject;
+            freeSlot.unit = doubleUnit.gameObject;
             neighbor.unit = doubleUnit.gameObject;
             doubleUnit.tailSlot.tailOf2xUnit = false;
             doubleUnit.tailSlot = neighbor;
-            singleUnitSlot.unit.transform.SetParent(singleUnitSlot.transform);
-            singleUnitSlot.unit.transform.localPosition = Vector3.zero;
             neighbor.tailOf2xUnit = true;
+
+            doubleUnitSlot.unit = null;
+
         }
     }
+    private void OneLeftUnitx2Swap()
+    {
+        var doubleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit != null);
+        var freeSlot = SelectedSlots.FirstOrDefault(s => s.unit == null);
+        // safety 
+        if (freeSlot == null || doubleUnitSlot == null) return;
+
+        var neighbor = GetRightNeighbor(freeSlot);
+        // clean swap condition: 
+        if (neighbor != null && neighbor.unit != null)
+        {
+            Debug.LogWarning("Trying");
+            var doubleUnit = doubleUnitSlot.unit.GetComponent<DoubleUnit>();
+            doubleUnit.tailSlot.unit = null;
+            // move double unit to single unit slot:
+            freeSlot.unit = doubleUnitSlot.unit;
+            // reset position and parent of double unit:
+            freeSlot.unit.transform.SetParent(freeSlot.transform);
+            freeSlot.unit.transform.localPosition = Vector3.zero;
+
+            freeSlot.unit = doubleUnit.gameObject;
+            neighbor.unit = doubleUnit.gameObject;
+            doubleUnit.tailSlot.tailOf2xUnit = false;
+            doubleUnit.tailSlot = neighbor;
+            neighbor.tailOf2xUnit = true;
+
+            doubleUnitSlot.unit = null;
+        }
+    }
+
 }
