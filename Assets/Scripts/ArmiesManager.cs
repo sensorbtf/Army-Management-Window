@@ -128,7 +128,6 @@ public class ArmiesManager : MonoBehaviour
         // find neighbor slot in the army: 
         return slotArmy.slots[index + 1];
     }
-
     public void DeleteButtonHandler()
     {
         foreach (var s in SelectedSlots)
@@ -260,6 +259,8 @@ public class ArmiesManager : MonoBehaviour
             Debug.LogWarning("SwapOneLeftUnitx2");
             var doubleUnit = doubleUnitSlot.unit.GetComponent<DoubleUnit>();
             doubleUnit.tailSlot.unit = null;
+            doubleUnit.tailSlot.tailOf2xUnit = false;
+            doubleUnit.tailSlot = neighbor;
 
             freeSlot.unit = doubleUnitSlot.unit;
             freeSlot.unit.transform.SetParent(freeSlot.transform);
@@ -267,22 +268,23 @@ public class ArmiesManager : MonoBehaviour
 
             freeSlot.unit = doubleUnit.gameObject;
             neighbor.unit = doubleUnit.gameObject;
-            doubleUnit.tailSlot.tailOf2xUnit = false;
-            doubleUnit.tailSlot = neighbor;
-            neighbor.tailOf2xUnit = true;
 
+            neighbor.tailOf2xUnit = true;
             doubleUnitSlot.unit = null;
         }
     }
     private void SwapLeftX1WithRightX2()
     {
+        /*
+         * TO DO:
+            REPAIR SINGLE SLOT UNIT TO MOVE INTO TAIL OF 2XUNIT
+         */
         var singleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("1x"));
         var doubleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("2x"));
 
         if (doubleUnitSlot == null || singleUnitSlot == null) return;
 
         var neighbor = GetRightNeighbor(singleUnitSlot);
-        var newSlotForSingleUnit = GetRightNeighbor(doubleUnitSlot);
 
         if (neighbor != null && neighbor.unit != null)
         {
@@ -290,20 +292,20 @@ public class ArmiesManager : MonoBehaviour
 
             var doubleUnit = doubleUnitSlot.unit.GetComponent<DoubleUnit>();
 
-            doubleUnit.tailSlot.unit = null;
             doubleUnitSlot.unit = singleUnitSlot.unit;
             doubleUnitSlot.unit.transform.SetParent(doubleUnitSlot.transform);
             doubleUnitSlot.unit.transform.localPosition = Vector3.zero;
 
-            newSlotForSingleUnit.unit = doubleUnit.gameObject;
-            neighbor.unit = doubleUnit.gameObject;
-            neighbor.tailOf2xUnit = true;
+            doubleUnit.tailSlot.unit = null;
             doubleUnit.tailSlot.tailOf2xUnit = false;
             doubleUnit.tailSlot = neighbor;
 
-            newSlotForSingleUnit.unit.transform.SetParent(newSlotForSingleUnit.transform);
-            newSlotForSingleUnit.unit.transform.localPosition = Vector3.zero;
-            
+            neighbor.unit = doubleUnit.gameObject;
+
+            singleUnitSlot.unit = doubleUnit.gameObject;
+            singleUnitSlot.unit.transform.SetParent(singleUnitSlot.transform);
+            singleUnitSlot.unit.transform.localPosition = Vector3.zero;
+            neighbor.tailOf2xUnit = true;
         }
     }
 }
