@@ -27,8 +27,6 @@ public class ArmiesManager : MonoBehaviour
         if (SelectedSlots.Count() == 0)
             swapButton.interactable = false;
 
-        //secondSelection = secondSelection;
-        //firstSelection = firstSelection;
     }
     public void SelectSlot(Slot slot)
     {
@@ -72,7 +70,7 @@ public class ArmiesManager : MonoBehaviour
         // if there are 2 selected but they are empty
         else if (SelectedSlots.FirstOrDefault(s => s.unit) == null)
             swapButton.interactable = false;
-        // checking if there 2 to selected units
+        // checking if there are 2  selected units
         else if (SelectedSlots.FirstOrDefault(s => s.unit) != null &&
                 SelectedSlots.Where(s => s.unit).Skip(1).FirstOrDefault() != null)
         {
@@ -165,9 +163,7 @@ public class ArmiesManager : MonoBehaviour
                     SwapX2WithEmpty();
             }
         }
-        else if (SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("1x")) && 
-              GetRightNeighbor(SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("1x"))) == 
-                SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("2x")))
+        else if (UnitX1Exists() && GetRightNeighbor(UnitX1Exists()) == UnitX2Exists())
             SwapLeftX1WithRightX2();
         else
             SimpleSwap();
@@ -176,8 +172,8 @@ public class ArmiesManager : MonoBehaviour
     {
         Debug.LogWarning("SimpleSwap()");
         // Simple swap by name that demands having something like "2xSlot/1xSlot" in name of Units
-        var doubleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("2x"));
-        var singleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("1x"));
+        var doubleUnitSlot = UnitX2Exists();
+        var singleUnitSlot = UnitX1Exists();
         // safety 
         if (doubleUnitSlot == null || singleUnitSlot == null) return;
 
@@ -206,8 +202,8 @@ public class ArmiesManager : MonoBehaviour
     private void SwapX1WithEmpty()
     {
         Debug.LogWarning("SwapX1WithEmpty");
-        var singleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit != null);
-        var freeSlot = SelectedSlots.FirstOrDefault(s => s.unit == null);
+        var singleUnitSlot = UnitDontExists();
+        var freeSlot = UnitExists();
         // safety 
         if (freeSlot == null || singleUnitSlot == null) return;
 
@@ -220,8 +216,8 @@ public class ArmiesManager : MonoBehaviour
     private void SwapX2WithEmpty()
     {
         Debug.LogWarning("SwapX2WithEmpty");
-        var doubleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit != null);
-        var freeSlot = SelectedSlots.FirstOrDefault(s => s.unit == null);
+        var doubleUnitSlot = UnitDontExists();
+        var freeSlot = UnitExists();
 
         if (freeSlot == null || doubleUnitSlot == null) return;
 
@@ -242,13 +238,12 @@ public class ArmiesManager : MonoBehaviour
             neighbor.tailOf2xUnit = true;
 
             doubleUnitSlot.unit = null;
-
         }
     }
     private void SwapOneLeftUnitx2()
     {
-        var doubleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit != null);
-        var freeSlot = SelectedSlots.FirstOrDefault(s => s.unit == null);
+        var doubleUnitSlot = UnitDontExists();
+        var freeSlot = UnitExists();
 
         if (freeSlot == null || doubleUnitSlot == null) return;
 
@@ -257,7 +252,9 @@ public class ArmiesManager : MonoBehaviour
         if (neighbor != null && neighbor.unit != null)
         {
             Debug.LogWarning("SwapOneLeftUnitx2");
+
             var doubleUnit = doubleUnitSlot.unit.GetComponent<DoubleUnit>();
+
             doubleUnit.tailSlot.unit = null;
             doubleUnit.tailSlot.tailOf2xUnit = false;
             doubleUnit.tailSlot = neighbor;
@@ -276,11 +273,11 @@ public class ArmiesManager : MonoBehaviour
     private void SwapLeftX1WithRightX2()
     {
         /*
-         * TO DO:
+         * TODO:
             REPAIR SINGLE SLOT UNIT TO MOVE INTO TAIL OF 2XUNIT
          */
-        var singleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("1x"));
-        var doubleUnitSlot = SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("2x"));
+        var singleUnitSlot = UnitX1Exists();
+        var doubleUnitSlot = UnitX2Exists();
 
         if (doubleUnitSlot == null || singleUnitSlot == null) return;
 
@@ -289,23 +286,25 @@ public class ArmiesManager : MonoBehaviour
         if (neighbor != null && neighbor.unit != null)
         {
             Debug.LogWarning("SwapLeftX1WithRightX2");
-
-            var doubleUnit = doubleUnitSlot.unit.GetComponent<DoubleUnit>();
-
-            doubleUnitSlot.unit = singleUnitSlot.unit;
-            doubleUnitSlot.unit.transform.SetParent(doubleUnitSlot.transform);
-            doubleUnitSlot.unit.transform.localPosition = Vector3.zero;
-
-            doubleUnit.tailSlot.unit = null;
-            doubleUnit.tailSlot.tailOf2xUnit = false;
-            doubleUnit.tailSlot = neighbor;
-
-            neighbor.unit = doubleUnit.gameObject;
-
-            singleUnitSlot.unit = doubleUnit.gameObject;
-            singleUnitSlot.unit.transform.SetParent(singleUnitSlot.transform);
-            singleUnitSlot.unit.transform.localPosition = Vector3.zero;
-            neighbor.tailOf2xUnit = true;
+            return;
         }
+    }
+
+    // getting methods to improve code readablity
+    private Slot UnitExists()
+    {
+        return SelectedSlots.FirstOrDefault(s => s.unit == null);
+    }
+    private Slot UnitDontExists()
+    {
+        return SelectedSlots.FirstOrDefault(s => s.unit != null);
+    }
+    private Slot UnitX1Exists()
+    {
+        return SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("1x"));
+    }
+    private Slot UnitX2Exists()
+    {
+        return SelectedSlots.FirstOrDefault(s => s.unit.name.Contains("2x"));
     }
 }
